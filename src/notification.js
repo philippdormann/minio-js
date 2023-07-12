@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { EventEmitter } from 'node:events'
+import { EventEmitter } from "node:events";
 
-import { DEFAULT_REGION } from './helpers.ts'
-import { pipesetup, uriEscape } from './internal/helper.ts'
-import * as transformers from './transformers.js'
+import { DEFAULT_REGION } from "./helpers.ts";
+import { pipesetup, uriEscape } from "./internal/helper.ts";
+import * as transformers from "./transformers.js";
 
 // Notification config - array of target configs.
 // Target configs can be
@@ -27,175 +27,175 @@ import * as transformers from './transformers.js'
 // 3. CloudFront (lambda function)
 export class NotificationConfig {
   add(target) {
-    let instance = ''
+    let instance = "";
     if (target instanceof TopicConfig) {
-      instance = 'TopicConfiguration'
+      instance = "TopicConfiguration";
     }
     if (target instanceof QueueConfig) {
-      instance = 'QueueConfiguration'
+      instance = "QueueConfiguration";
     }
     if (target instanceof CloudFunctionConfig) {
-      instance = 'CloudFunctionConfiguration'
+      instance = "CloudFunctionConfiguration";
     }
     if (!this[instance]) {
-      this[instance] = []
+      this[instance] = [];
     }
-    this[instance].push(target)
+    this[instance].push(target);
   }
 }
 
 // Base class for three supported configs.
 class TargetConfig {
   setId(id) {
-    this.Id = id
+    this.Id = id;
   }
   addEvent(newevent) {
     if (!this.Event) {
-      this.Event = []
+      this.Event = [];
     }
-    this.Event.push(newevent)
+    this.Event.push(newevent);
   }
   addFilterSuffix(suffix) {
     if (!this.Filter) {
-      this.Filter = { S3Key: { FilterRule: [] } }
+      this.Filter = { S3Key: { FilterRule: [] } };
     }
-    this.Filter.S3Key.FilterRule.push({ Name: 'suffix', Value: suffix })
+    this.Filter.S3Key.FilterRule.push({ Name: "suffix", Value: suffix });
   }
   addFilterPrefix(prefix) {
     if (!this.Filter) {
-      this.Filter = { S3Key: { FilterRule: [] } }
+      this.Filter = { S3Key: { FilterRule: [] } };
     }
-    this.Filter.S3Key.FilterRule.push({ Name: 'prefix', Value: prefix })
+    this.Filter.S3Key.FilterRule.push({ Name: "prefix", Value: prefix });
   }
 }
 
 // 1. Topic (simple notification service)
 export class TopicConfig extends TargetConfig {
   constructor(arn) {
-    super()
-    this.Topic = arn
+    super();
+    this.Topic = arn;
   }
 }
 
 // 2. Queue (simple queue service)
 export class QueueConfig extends TargetConfig {
   constructor(arn) {
-    super()
-    this.Queue = arn
+    super();
+    this.Queue = arn;
   }
 }
 
 // 3. CloudFront (lambda function)
 export class CloudFunctionConfig extends TargetConfig {
   constructor(arn) {
-    super()
-    this.CloudFunction = arn
+    super();
+    this.CloudFunction = arn;
   }
 }
 
 export const buildARN = (partition, service, region, accountId, resource) => {
-  return 'arn:' + partition + ':' + service + ':' + region + ':' + accountId + ':' + resource
-}
+  return "arn:" + partition + ":" + service + ":" + region + ":" + accountId + ":" + resource;
+};
 
-export const ObjectCreatedAll = 's3:ObjectCreated:*'
-export const ObjectCreatedPut = 's3:ObjectCreated:Put'
-export const ObjectCreatedPost = 's3:ObjectCreated:Post'
-export const ObjectCreatedCopy = 's3:ObjectCreated:Copy'
-export const ObjectCreatedCompleteMultipartUpload = 's3:ObjectCreated:CompleteMultipartUpload'
-export const ObjectRemovedAll = 's3:ObjectRemoved:*'
-export const ObjectRemovedDelete = 's3:ObjectRemoved:Delete'
-export const ObjectRemovedDeleteMarkerCreated = 's3:ObjectRemoved:DeleteMarkerCreated'
-export const ObjectReducedRedundancyLostObject = 's3:ReducedRedundancyLostObject'
+export const ObjectCreatedAll = "s3:ObjectCreated:*";
+export const ObjectCreatedPut = "s3:ObjectCreated:Put";
+export const ObjectCreatedPost = "s3:ObjectCreated:Post";
+export const ObjectCreatedCopy = "s3:ObjectCreated:Copy";
+export const ObjectCreatedCompleteMultipartUpload = "s3:ObjectCreated:CompleteMultipartUpload";
+export const ObjectRemovedAll = "s3:ObjectRemoved:*";
+export const ObjectRemovedDelete = "s3:ObjectRemoved:Delete";
+export const ObjectRemovedDeleteMarkerCreated = "s3:ObjectRemoved:DeleteMarkerCreated";
+export const ObjectReducedRedundancyLostObject = "s3:ReducedRedundancyLostObject";
 
 // Poll for notifications, used in #listenBucketNotification.
 // Listening constitutes repeatedly requesting s3 whether or not any
 // changes have occurred.
 export class NotificationPoller extends EventEmitter {
   constructor(client, bucketName, prefix, suffix, events) {
-    super()
+    super();
 
-    this.client = client
-    this.bucketName = bucketName
-    this.prefix = prefix
-    this.suffix = suffix
-    this.events = events
+    this.client = client;
+    this.bucketName = bucketName;
+    this.prefix = prefix;
+    this.suffix = suffix;
+    this.events = events;
 
-    this.ending = false
+    this.ending = false;
   }
 
   // Starts the polling.
   start() {
-    this.ending = false
+    this.ending = false;
 
     process.nextTick(() => {
-      this.checkForChanges()
-    })
+      this.checkForChanges();
+    });
   }
 
   // Stops the polling.
   stop() {
-    this.ending = true
+    this.ending = true;
   }
 
   checkForChanges() {
     // Don't continue if we're looping again but are cancelled.
     if (this.ending) {
-      return
+      return;
     }
 
-    let method = 'GET'
-    var queries = []
+    let method = "GET";
+    var queries = [];
     if (this.prefix) {
-      var prefix = uriEscape(this.prefix)
-      queries.push(`prefix=${prefix}`)
+      var prefix = uriEscape(this.prefix);
+      queries.push(`prefix=${prefix}`);
     }
     if (this.suffix) {
-      var suffix = uriEscape(this.suffix)
-      queries.push(`suffix=${suffix}`)
+      var suffix = uriEscape(this.suffix);
+      queries.push(`suffix=${suffix}`);
     }
     if (this.events) {
-      this.events.forEach((s3event) => queries.push('events=' + uriEscape(s3event)))
+      this.events.forEach((s3event) => queries.push("events=" + uriEscape(s3event)));
     }
-    queries.sort()
+    queries.sort();
 
-    var query = ''
+    var query = "";
     if (queries.length > 0) {
-      query = `${queries.join('&')}`
+      query = `${queries.join("&")}`;
     }
-    const region = this.client.region || DEFAULT_REGION
-    this.client.makeRequest({ method, bucketName: this.bucketName, query }, '', [200], region, true, (e, response) => {
+    const region = this.client.region || DEFAULT_REGION;
+    this.client.makeRequest({ method, bucketName: this.bucketName, query }, "", [200], region, true, (e, response) => {
       if (e) {
-        return this.emit('error', e)
+        return this.emit("error", e);
       }
 
-      let transformer = transformers.getNotificationTransformer()
+      let transformer = transformers.getNotificationTransformer();
       pipesetup(response, transformer)
-        .on('data', (result) => {
+        .on("data", (result) => {
           // Data is flushed periodically (every 5 seconds), so we should
           // handle it after flushing from the JSON parser.
-          let records = result.Records
+          let records = result.Records;
           // If null (= no records), change to an empty array.
           if (!records) {
-            records = []
+            records = [];
           }
 
           // Iterate over the notifications and emit them individually.
           records.forEach((record) => {
-            this.emit('notification', record)
-          })
+            this.emit("notification", record);
+          });
 
           // If we're done, stop.
           if (this.ending) {
-            response.destroy()
+            response.destroy();
           }
         })
-        .on('error', (e) => this.emit('error', e))
-        .on('end', () => {
+        .on("error", (e) => this.emit("error", e))
+        .on("end", () => {
           // Do it again, if we haven't cancelled yet.
           process.nextTick(() => {
-            this.checkForChanges()
-          })
-        })
-    })
+            this.checkForChanges();
+          });
+        });
+    });
   }
 }

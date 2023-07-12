@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import * as stream from 'node:stream'
+import * as stream from "node:stream";
 
-import * as errors from '../errors.ts'
-import type { TypedClient } from './client.ts'
-import { isBoolean, isString, isValidBucketName, isValidPrefix, uriEscape } from './helper.ts'
-import { readAsString } from './response.ts'
-import type { BucketItemWithMetadata, BucketStream } from './type.ts'
-import { parseListObjectsV2WithMetadata } from './xml-parser.ts'
+import * as errors from "../errors.ts";
+import type { TypedClient } from "./client.ts";
+import { isBoolean, isString, isValidBucketName, isValidPrefix, uriEscape } from "./helper.ts";
+import { readAsString } from "./response.ts";
+import type { BucketItemWithMetadata, BucketStream } from "./type.ts";
+import { parseListObjectsV2WithMetadata } from "./xml-parser.ts";
 
 export class Extensions {
   constructor(private readonly client: TypedClient) {}
@@ -42,35 +42,35 @@ export class Extensions {
     startAfter?: string,
   ): BucketStream<BucketItemWithMetadata> {
     if (prefix === undefined) {
-      prefix = ''
+      prefix = "";
     }
     if (recursive === undefined) {
-      recursive = false
+      recursive = false;
     }
     if (startAfter === undefined) {
-      startAfter = ''
+      startAfter = "";
     }
     if (!isValidBucketName(bucketName)) {
-      throw new errors.InvalidBucketNameError('Invalid bucket name: ' + bucketName)
+      throw new errors.InvalidBucketNameError("Invalid bucket name: " + bucketName);
     }
     if (!isValidPrefix(prefix)) {
-      throw new errors.InvalidPrefixError(`Invalid prefix : ${prefix}`)
+      throw new errors.InvalidPrefixError(`Invalid prefix : ${prefix}`);
     }
     if (!isString(prefix)) {
-      throw new TypeError('prefix should be of type "string"')
+      throw new TypeError("prefix should be of type \"string\"");
     }
     if (!isBoolean(recursive)) {
-      throw new TypeError('recursive should be of type "boolean"')
+      throw new TypeError("recursive should be of type \"boolean\"");
     }
     if (!isString(startAfter)) {
-      throw new TypeError('startAfter should be of type "string"')
+      throw new TypeError("startAfter should be of type \"string\"");
     }
 
     // if recursive is false set delimiter to '/'
-    const delimiter = recursive ? '' : '/'
+    const delimiter = recursive ? "" : "/";
     return stream.Readable.from(this.listObjectsV2WithMetadataGen(bucketName, prefix, delimiter, startAfter), {
       objectMode: true,
-    })
+    });
   }
 
   private async *listObjectsV2WithMetadataGen(
@@ -79,8 +79,8 @@ export class Extensions {
     delimiter: string,
     startAfter: string,
   ): AsyncIterable<BucketItemWithMetadata> {
-    let ended = false
-    let continuationToken = ''
+    let ended = false;
+    let continuationToken = "";
     do {
       const result = await this.listObjectsV2WithMetadataQuery(
         bucketName,
@@ -88,13 +88,13 @@ export class Extensions {
         continuationToken,
         delimiter,
         startAfter,
-      )
-      ended = !result.isTruncated
-      continuationToken = result.nextContinuationToken
+      );
+      ended = !result.isTruncated;
+      continuationToken = result.nextContinuationToken;
       for (const obj of result.objects) {
-        yield obj
+        yield obj;
       }
-    } while (!ended)
+    } while (!ended);
   }
 
   private async listObjectsV2WithMetadataQuery(
@@ -104,33 +104,33 @@ export class Extensions {
     delimiter: string,
     startAfter: string,
   ) {
-    const queries = []
+    const queries = [];
 
     // Call for listing objects v2 API
-    queries.push(`list-type=2`)
-    queries.push(`encoding-type=url`)
+    queries.push(`list-type=2`);
+    queries.push(`encoding-type=url`);
     // escape every value in query string, except maxKeys
-    queries.push(`prefix=${uriEscape(prefix)}`)
-    queries.push(`delimiter=${uriEscape(delimiter)}`)
-    queries.push(`metadata=true`)
+    queries.push(`prefix=${uriEscape(prefix)}`);
+    queries.push(`delimiter=${uriEscape(delimiter)}`);
+    queries.push(`metadata=true`);
 
     if (continuationToken) {
-      continuationToken = uriEscape(continuationToken)
-      queries.push(`continuation-token=${continuationToken}`)
+      continuationToken = uriEscape(continuationToken);
+      queries.push(`continuation-token=${continuationToken}`);
     }
     // Set start-after
     if (startAfter) {
-      startAfter = uriEscape(startAfter)
-      queries.push(`start-after=${startAfter}`)
+      startAfter = uriEscape(startAfter);
+      queries.push(`start-after=${startAfter}`);
     }
-    queries.push(`max-keys=1000`)
-    queries.sort()
-    let query = ''
+    queries.push(`max-keys=1000`);
+    queries.sort();
+    let query = "";
     if (queries.length > 0) {
-      query = `${queries.join('&')}`
+      query = `${queries.join("&")}`;
     }
-    const method = 'GET'
-    const res = await this.client.makeRequestAsync({ method, bucketName, query })
-    return parseListObjectsV2WithMetadata(await readAsString(res))
+    const method = "GET";
+    const res = await this.client.makeRequestAsync({ method, bucketName, query });
+    return parseListObjectsV2WithMetadata(await readAsString(res));
   }
 }

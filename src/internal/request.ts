@@ -1,9 +1,9 @@
-import type * as http from 'node:http'
-import type * as https from 'node:https'
-import type * as stream from 'node:stream'
-import { pipeline } from 'node:stream'
+import type * as http from "node:http";
+import type * as https from "node:https";
+import type * as stream from "node:stream";
+import { pipeline } from "node:stream";
 
-import type { Transport } from './type.ts'
+import type { Transport } from "./type.ts";
 
 export async function request(
   transport: Transport,
@@ -12,24 +12,24 @@ export async function request(
 ): Promise<http.IncomingMessage> {
   return new Promise<http.IncomingMessage>((resolve, reject) => {
     const requestObj = transport.request(opt, (resp) => {
-      resolve(resp)
-    })
+      resolve(resp);
+    });
 
-    if (!body || Buffer.isBuffer(body) || typeof body === 'string') {
+    if (!body || Buffer.isBuffer(body) || typeof body === "string") {
       requestObj
-        .on('error', (e: unknown) => {
-          reject(e)
+        .on("error", (e: unknown) => {
+          reject(e);
         })
-        .end(body)
+        .end(body);
 
-      return
+      return;
     }
 
     // pump readable stream
     pipeline(body, requestObj, (err) => {
       if (err) {
-        reject(err)
+        reject(err);
       }
-    })
-  })
+    });
+  });
 }

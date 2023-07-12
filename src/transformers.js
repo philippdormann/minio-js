@@ -14,83 +14,83 @@
  * limitations under the License.
  */
 
-import * as Crypto from 'node:crypto'
+import * as Crypto from "node:crypto";
 
-import JSONParser from 'json-stream'
-import Through2 from 'through2'
+import JSONParser from "json-stream";
+import Through2 from "through2";
 
-import { isFunction } from './internal/helper.ts'
-import * as xmlParsers from './xml-parsers.js'
+import { isFunction } from "./internal/helper.ts";
+import * as xmlParsers from "./xml-parsers.js";
 
 // getConcater returns a stream that concatenates the input and emits
 // the concatenated output when 'end' has reached. If an optional
 // parser function is passed upon reaching the 'end' of the stream,
 // `parser(concatenated_data)` will be emitted.
 export function getConcater(parser, emitError) {
-  var objectMode = false
-  var bufs = []
+  var objectMode = false;
+  var bufs = [];
 
   if (parser && !isFunction(parser)) {
-    throw new TypeError('parser should be of type "function"')
+    throw new TypeError("parser should be of type \"function\"");
   }
 
   if (parser) {
-    objectMode = true
+    objectMode = true;
   }
 
   return Through2(
     { objectMode },
-    function (chunk, enc, cb) {
-      bufs.push(chunk)
-      cb()
+    function(chunk, enc, cb) {
+      bufs.push(chunk);
+      cb();
     },
-    function (cb) {
+    function(cb) {
       if (emitError) {
-        cb(parser(Buffer.concat(bufs).toString()))
+        cb(parser(Buffer.concat(bufs).toString()));
         // cb(e) would mean we have to emit 'end' by explicitly calling this.push(null)
-        this.push(null)
-        return
+        this.push(null);
+        return;
       }
       if (bufs.length) {
         if (parser) {
-          this.push(parser(Buffer.concat(bufs).toString()))
+          this.push(parser(Buffer.concat(bufs).toString()));
         } else {
-          this.push(Buffer.concat(bufs))
+          this.push(Buffer.concat(bufs));
         }
       }
-      cb()
+      cb();
     },
-  )
+  );
 }
 
 // A through stream that calculates md5sum and sha256sum
 export function getHashSummer(enableSHA256) {
-  var md5 = Crypto.createHash('md5')
-  var sha256 = Crypto.createHash('sha256')
+  var md5 = Crypto.createHash("md5");
+  var sha256 = Crypto.createHash("sha256");
 
   return Through2.obj(
-    function (chunk, enc, cb) {
+    function(chunk, enc, cb) {
       if (enableSHA256) {
-        sha256.update(chunk)
+        sha256.update(chunk);
       } else {
-        md5.update(chunk)
+        md5.update(chunk);
       }
-      cb()
+      cb();
     },
-    function (cb) {
-      var md5sum = ''
-      var sha256sum = ''
+    function(cb) {
+      var md5sum = "";
+      var sha256sum = "";
       if (enableSHA256) {
-        sha256sum = sha256.digest('hex')
+        sha256sum = sha256.digest("hex");
       } else {
-        md5sum = md5.digest('base64')
+        md5sum = md5.digest("base64");
       }
-      var hashData = { md5sum, sha256sum }
-      this.push(hashData)
-      this.push(null)
-      cb()
+      var hashData = { md5sum, sha256sum };
+      this.push(hashData);
+      this.push(null);
+      cb();
     },
-  )
+  );
 }
 
 // Following functions return a stream object that parses XML
@@ -98,88 +98,88 @@ export function getHashSummer(enableSHA256) {
 
 // Parses CopyObject response.
 export function getCopyObjectTransformer() {
-  return getConcater(xmlParsers.parseCopyObject)
+  return getConcater(xmlParsers.parseCopyObject);
 }
 
 // Parses listMultipartUploads response.
 export function getListMultipartTransformer() {
-  return getConcater(xmlParsers.parseListMultipart)
+  return getConcater(xmlParsers.parseListMultipart);
 }
 
 // Parses initMultipartUpload response.
 export function getInitiateMultipartTransformer() {
-  return getConcater(xmlParsers.parseInitiateMultipart)
+  return getConcater(xmlParsers.parseInitiateMultipart);
 }
 
 // Parses listObjects response.
 export function getListObjectsTransformer() {
-  return getConcater(xmlParsers.parseListObjects)
+  return getConcater(xmlParsers.parseListObjects);
 }
 
 // Parses listObjects response.
 export function getListObjectsV2Transformer() {
-  return getConcater(xmlParsers.parseListObjectsV2)
+  return getConcater(xmlParsers.parseListObjectsV2);
 }
 
 // Parses listObjects with metadata response.
 export function getListObjectsV2WithMetadataTransformer() {
-  return getConcater(xmlParsers.parseListObjectsV2WithMetadata)
+  return getConcater(xmlParsers.parseListObjectsV2WithMetadata);
 }
 
 // Parses completeMultipartUpload response.
 export function getCompleteMultipartTransformer() {
-  return getConcater(xmlParsers.parseCompleteMultipart)
+  return getConcater(xmlParsers.parseCompleteMultipart);
 }
 
 // Parses GET/SET BucketNotification response
 export function getBucketNotificationTransformer() {
-  return getConcater(xmlParsers.parseBucketNotification)
+  return getConcater(xmlParsers.parseBucketNotification);
 }
 
 // Parses a notification.
 export function getNotificationTransformer() {
   // This will parse and return each object.
-  return new JSONParser()
+  return new JSONParser();
 }
 
 export function bucketVersioningTransformer() {
-  return getConcater(xmlParsers.parseBucketVersioningConfig)
+  return getConcater(xmlParsers.parseBucketVersioningConfig);
 }
 
 export function getTagsTransformer() {
-  return getConcater(xmlParsers.parseTagging)
+  return getConcater(xmlParsers.parseTagging);
 }
 
 export function lifecycleTransformer() {
-  return getConcater(xmlParsers.parseLifecycleConfig)
+  return getConcater(xmlParsers.parseLifecycleConfig);
 }
 
 export function objectLockTransformer() {
-  return getConcater(xmlParsers.parseObjectLockConfig)
+  return getConcater(xmlParsers.parseObjectLockConfig);
 }
 
 export function objectRetentionTransformer() {
-  return getConcater(xmlParsers.parseObjectRetentionConfig)
+  return getConcater(xmlParsers.parseObjectRetentionConfig);
 }
 export function bucketEncryptionTransformer() {
-  return getConcater(xmlParsers.parseBucketEncryptionConfig)
+  return getConcater(xmlParsers.parseBucketEncryptionConfig);
 }
 
 export function replicationConfigTransformer() {
-  return getConcater(xmlParsers.parseReplicationConfig)
+  return getConcater(xmlParsers.parseReplicationConfig);
 }
 
 export function objectLegalHoldTransformer() {
-  return getConcater(xmlParsers.parseObjectLegalHoldConfig)
+  return getConcater(xmlParsers.parseObjectLegalHoldConfig);
 }
 
 export function uploadPartTransformer() {
-  return getConcater(xmlParsers.uploadPartParser)
+  return getConcater(xmlParsers.uploadPartParser);
 }
 export function selectObjectContentTransformer() {
-  return getConcater()
+  return getConcater();
 }
 
 export function removeObjectsTransformer() {
-  return getConcater(xmlParsers.removeObjectsParser)
+  return getConcater(xmlParsers.removeObjectsParser);
 }

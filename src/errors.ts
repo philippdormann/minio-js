@@ -20,9 +20,9 @@ class ExtendableError extends Error {
   constructor(message?: string, opt?: ErrorOptions) {
     // error Option {cause?: unknown} is a 'nice to have',
     // don't use it internally
-    super(message, opt)
+    super(message, opt);
     // set error name, otherwise it's always 'Error'
-    this.name = this.constructor.name
+    this.name = this.constructor.name;
   }
 }
 
@@ -113,7 +113,7 @@ export class InvalidXMLError extends ExtendableError {}
  * see getErrorTransformer for details
  */
 export class S3Error extends ExtendableError {
-  code?: string
+  code?: string;
 }
 
 export class IsValidBucketNameError extends ExtendableError {}
